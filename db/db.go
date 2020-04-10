@@ -3,26 +3,30 @@
 # Author: xiezg
 # Mail: xzghyd2008@hotmail.com
 # Created Time: 2020-03-08 11:47:45
-# Last modified: 2020-03-10 17:34:28
+# Last modified: 2020-04-08 21:21:26
 ************************************************************************/
 
 package db
 
 import "fmt"
+import "time"
+import "context"
 import "database/sql"
 import _ "github.com/go-sql-driver/mysql"
 
-func InitMysql(ip string, port int, userName string, password string) (*sql.DB, error) {
+func InitMysql(ip string, port int, userName string, password string, dbname string) (*sql.DB, error) {
 
-	//dataSourceName := "jingzheng:JJ10RU6Xi3mFuRZN@tcp()/jingzheng?charset=utf8"
-	dsn := fmt.Sprintf("%s:%s@tcp(%s:%d)/", userName, password, ip, port)
+	dsn := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=utf8", userName, password, ip, port, dbname)
 
 	db, err := sql.Open("mysql", dsn)
 	if err != nil {
 		return nil, err
 	}
 
-	if err := db.Ping(); err != nil {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel() // releases resources if slowOperation completes before timeout elapses
+
+	if err := db.PingContext(ctx); err != nil {
 		db.Close()
 		return nil, err
 	}
