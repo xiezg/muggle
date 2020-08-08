@@ -3,7 +3,7 @@
 # Author: xiezg
 # Mail: xzghyd2008@hotmail.com
 # Created Time: 2019-06-28 12:35:21
-# Last modified: 2020-08-06 10:31:24
+# Last modified: 2020-08-08 13:16:01
 ************************************************************************/
 package auth
 
@@ -72,7 +72,7 @@ func Login(query func(string, string) (interface{}, error), redirect string) fun
 
 	return func(w http.ResponseWriter, r *http.Request) {
 
-		defer r.Body.Close()
+		//defer r.Body.Close()
 
 		b, err := ioutil.ReadAll(r.Body)
 		if err != nil {
@@ -114,6 +114,7 @@ func Login(query func(string, string) (interface{}, error), redirect string) fun
 
 		user_ctx, err := query(accInfo.Name, accInfo.Pwd)
 		if err != nil {
+			glog.Errorf("user:%v login fails.err:%v", accInfo, err)
 			common_response(w, nil, fmt.Errorf("login fails.errmsg:%v", err))
 			return
 		}
@@ -146,7 +147,7 @@ func Auth(proc func(interface{}, []byte) (interface{}, error)) func(w http.Respo
 
 	return func(w http.ResponseWriter, r *http.Request) {
 
-		defer r.Body.Close()
+		//defer r.Body.Close()
 
 		cookie, err := r.Cookie("jsessionid")
 		if err != nil {
@@ -173,5 +174,56 @@ func Auth(proc func(interface{}, []byte) (interface{}, error)) func(w http.Respo
 
 		result, err := proc(value.(*account_info).ctx, body)
 		common_response(w, result, err)
+	}
+}
+
+func AuthUploadFile(proc func(interface{}, *http.Request) (interface{}, error)) func(w http.ResponseWriter, r *http.Request) {
+
+	return func(w http.ResponseWriter, r *http.Request) {
+
+		cookie, err := r.Cookie("jsessionid")
+		if err != nil {
+
+			if err == http.ErrNoCookie {
+				common_response(w, nil, loginErr)
+			} else {
+				http.Error(w, fmt.Sprintf("%v", err), http.StatusBadRequest)
+			}
+			return
+		}
+
+		value, ok := cookieMap.Load(cookie.Value)
+		if !ok {
+			common_response(w, nil, loginErr)
+			return
+		}
+
+		result, err := proc(value.(*account_info).ctx, r)
+		common_response(w, result, err)
+	}
+}
+
+func AuthDownloadFile(proc func(interface{}, http.ResponseWriter, *http.Request)) func(w http.ResponseWriter, r *http.Request) {
+
+	return func(w http.ResponseWriter, r *http.Request) {
+
+		cookie, err := r.Cookie("jsessionid")
+		if err != nil {
+
+			if err == http.ErrNoCookie {
+				common_response(w, nil, loginErr)
+			} else {
+				http.Error(w, fmt.Sprintf("%v", err), http.StatusBadRequest)
+			}
+			return
+		}
+
+		value, ok := cookieMap.Load(cookie.Value)
+		if !ok {
+			common_response(w, nil, loginErr)
+			return
+		}
+
+		proc(value.(*account_info).ctx, w, r)
 	}
 }
