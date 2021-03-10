@@ -1,0 +1,4 @@
+github.com/go-sql-driver/mysql v1.5.0 h1:ozyZYNQW3x3HtqT1jira07DN2PArx2v7/mN66gGcHOs=
+github.com/go-sql-driver/mysql v1.5.0/go.mod h1:DCzpHaOWr8IXmIStZouvnhqoel9Qv2LBy8hT2VhHyBg=
+github.com/xiezg/glog v0.0.0-20200512024805-77553a7bf27a h1:0S964t8dtYpeh6WRo7S2qH3ZM5lL8nJfWiWSj+QOPFc=
+github.com/xiezg/glog v0.0.0-20200512024805-77553a7bf27a/go.mod h1:bF6foxew4T+rfLXbdX9gIZoMXL2vyMMrQqZYmCxcUEk=

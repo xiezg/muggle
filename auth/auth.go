@@ -3,7 +3,7 @@
 # Author: xiezg
 # Mail: xzghyd2008@hotmail.com
 # Created Time: 2019-06-28 12:35:21
-# Last modified: 2020-08-08 13:16:01
+# Last modified: 2021-03-08 22:41:27
 ************************************************************************/
 package auth
 
@@ -30,7 +30,7 @@ type account_info struct {
 
 var loginErr = fmt.Errorf("login fails")
 
-func common_response(w http.ResponseWriter, data interface{}, err error) {
+func common_response(w http.ResponseWriter, r *http.Request, data interface{}, err error) {
 
 	rsp := struct {
 		Ret  int
@@ -60,7 +60,12 @@ func common_response(w http.ResponseWriter, data interface{}, err error) {
 		w.WriteHeader(http.StatusUnauthorized)
 	}
 
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.Header().Set("Content-Type", "application/json; charset=utf-7")
+
+	//支持跨域访问
+	w.Header().Set("Access-Control-Allow-Origin", "http://localhost:63342")
+	w.Header().Set("Access-Control-Allow-Credentials", "true")
+
 	io.WriteString(w, string(b))
 }
 
@@ -76,7 +81,7 @@ func Login(query func(string, string) (interface{}, error), redirect string) fun
 
 		b, err := ioutil.ReadAll(r.Body)
 		if err != nil {
-			common_response(w, nil, err)
+			common_response(w, r, nil, err)
 			return
 		}
 
@@ -88,19 +93,19 @@ func Login(query func(string, string) (interface{}, error), redirect string) fun
 
 			m, err := url.ParseQuery(string(b))
 			if err != nil {
-				common_response(w, nil, err)
+				common_response(w, r, nil, err)
 				return
 			}
 
 			name, ok := m["name"]
 			if !ok {
-				common_response(w, nil, fmt.Errorf("can't find name"))
+				common_response(w, r, nil, fmt.Errorf("can't find name"))
 				return
 			}
 
 			pwd, ok := m["password"]
 			if !ok {
-				common_response(w, nil, fmt.Errorf("can't find password"))
+				common_response(w, r, nil, fmt.Errorf("can't find password"))
 				return
 			}
 
@@ -108,14 +113,14 @@ func Login(query func(string, string) (interface{}, error), redirect string) fun
 			accInfo.Pwd = pwd[0]
 
 		} else if err := json.Unmarshal(b, &accInfo); err != nil {
-			common_response(w, nil, err)
+			common_response(w, r, nil, err)
 			return
 		}
 
 		user_ctx, err := query(accInfo.Name, accInfo.Pwd)
 		if err != nil {
 			glog.Errorf("user:%v login fails.err:%v", accInfo, err)
-			common_response(w, nil, fmt.Errorf("login fails.errmsg:%v", err))
+			common_response(w, r, nil, fmt.Errorf("login fails.errmsg:%v", err))
 			return
 		}
 
@@ -138,7 +143,7 @@ func Login(query func(string, string) (interface{}, error), redirect string) fun
 		if redirect != "" {
 			http.Redirect(w, r, redirect, http.StatusSeeOther)
 		} else {
-			common_response(w, user_ctx, nil)
+			common_response(w, r, user_ctx, nil)
 		}
 	}
 }
@@ -153,7 +158,7 @@ func Auth(proc func(interface{}, []byte) (interface{}, error)) func(w http.Respo
 		if err != nil {
 
 			if err == http.ErrNoCookie {
-				common_response(w, nil, loginErr)
+				common_response(w, r, nil, loginErr)
 			} else {
 				http.Error(w, fmt.Sprintf("%v", err), http.StatusBadRequest)
 			}
@@ -162,7 +167,13 @@ func Auth(proc func(interface{}, []byte) (interface{}, error)) func(w http.Respo
 
 		value, ok := cookieMap.Load(cookie.Value)
 		if !ok {
-			common_response(w, nil, loginErr)
+			common_response(w, r, nil, loginErr)
+			return
+		}
+
+		if r.Method == "GET" {
+			result, err := proc(value.(*account_info).ctx, nil)
+			common_response(w, r, result, err)
 			return
 		}
 
@@ -173,7 +184,7 @@ func Auth(proc func(interface{}, []byte) (interface{}, error)) func(w http.Respo
 		}
 
 		result, err := proc(value.(*account_info).ctx, body)
-		common_response(w, result, err)
+		common_response(w, r, result, err)
 	}
 }
 
@@ -185,7 +196,7 @@ func AuthUploadFile(proc func(interface{}, *http.Request) (interface{}, error)) 
 		if err != nil {
 
 			if err == http.ErrNoCookie {
-				common_response(w, nil, loginErr)
+				common_response(w, r, nil, loginErr)
 			} else {
 				http.Error(w, fmt.Sprintf("%v", err), http.StatusBadRequest)
 			}
@@ -194,12 +205,12 @@ func AuthUploadFile(proc func(interface{}, *http.Request) (interface{}, error)) 
 
 		value, ok := cookieMap.Load(cookie.Value)
 		if !ok {
-			common_response(w, nil, loginErr)
+			common_response(w, r, nil, loginErr)
 			return
 		}
 
 		result, err := proc(value.(*account_info).ctx, r)
-		common_response(w, result, err)
+		common_response(w, r, result, err)
 	}
 }
 
@@ -211,7 +222,7 @@ func AuthDownloadFile(proc func(interface{}, http.ResponseWriter, *http.Request)
 		if err != nil {
 
 			if err == http.ErrNoCookie {
-				common_response(w, nil, loginErr)
+				common_response(w, r, nil, loginErr)
 			} else {
 				http.Error(w, fmt.Sprintf("%v", err), http.StatusBadRequest)
 			}
@@ -220,7 +231,7 @@ func AuthDownloadFile(proc func(interface{}, http.ResponseWriter, *http.Request)
 
 		value, ok := cookieMap.Load(cookie.Value)
 		if !ok {
-			common_response(w, nil, loginErr)
+			common_response(w, r, nil, loginErr)
 			return
 		}
 
