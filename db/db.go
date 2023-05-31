@@ -3,16 +3,19 @@
 # Author: xiezg
 # Mail: xzghyd2008@hotmail.com
 # Created Time: 2020-03-08 11:47:45
-# Last modified: 2020-04-08 21:21:26
+# Last modified: 2022-11-13 15:49:38
 ************************************************************************/
 
 package db
 
-import "fmt"
-import "time"
-import "context"
-import "database/sql"
-import _ "github.com/go-sql-driver/mysql"
+import (
+	"context"
+	"database/sql"
+	"fmt"
+	"time"
+
+	_ "github.com/go-sql-driver/mysql"
+)
 
 func InitMysql(ip string, port int, userName string, password string, dbname string) (*sql.DB, error) {
 

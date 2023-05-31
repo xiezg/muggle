@@ -3,29 +3,37 @@
 # Author: xiezg
 # Mail: xzghyd2008@hotmail.com
 # Created Time: 2019-06-28 12:35:21
-# Last modified: 2021-03-08 22:41:27
+# Last modified: 2022-05-02 18:15:12
 ************************************************************************/
 package auth
 
-import "io"
-import "fmt"
-import "sync"
-import "time"
-import "net/url"
-import "net/http"
-import "io/ioutil"
-import "crypto/md5"
-import "encoding/hex"
-import "encoding/json"
-import "github.com/xiezg/glog"
+import (
+	"crypto/md5"
+	"encoding/hex"
+	"encoding/json"
+	"fmt"
+	"io"
+	"io/ioutil"
+	"net/http"
+	"net/url"
+	"sync"
+	"time"
+
+	"github.com/xiezg/glog"
+)
 
 var cookieMap sync.Map
-var session_maxAge int = 7 * 24 * 3600
+var session_maxAge int = 3600
 
 type account_info struct {
 	Name string `json:"name"`
 	Pwd  string `json:"password"`
 	ctx  interface{}
+}
+
+type UserCtx struct {
+	IP        string
+	login_ctx interface{}
 }
 
 var loginErr = fmt.Errorf("login fails")
@@ -85,6 +93,7 @@ func Login(query func(string, string) (interface{}, error), redirect string) fun
 			return
 		}
 
+		glog.V(10).Info(r.Header.Get("X-Real-IP"))
 		glog.V(10).Info(string(b))
 
 		var accInfo account_info
@@ -134,7 +143,7 @@ func Login(query func(string, string) (interface{}, error), redirect string) fun
 			Secure: false,
 		}
 
-		accInfo.ctx = user_ctx
+		accInfo.ctx = &UserCtx{r.Header.Get("X-Real-IP"), user_ctx}
 
 		cookieMap.Store(hex.EncodeToString(sessId[:]), &accInfo)
 
@@ -147,6 +156,8 @@ func Login(query func(string, string) (interface{}, error), redirect string) fun
 		}
 	}
 }
+
+//2022-05-02 17:47 proc函数中想要拿到IP地址，但是按照现在的结构，是做不到的
 
 func Auth(proc func(interface{}, []byte) (interface{}, error)) func(w http.ResponseWriter, r *http.Request) {
 
